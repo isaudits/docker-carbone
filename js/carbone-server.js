@@ -31,7 +31,12 @@ app.post('/', function(request, response) {
   template = request.body.template
   filename = template.replace(/^.*[\\\/]/, '')    //extract template filename to use as download file name
   data = JSON.parse(request.body.json)
-  options = {convertTo : 'pdf'}
+  options = JSON.parse(request.body.options)
+
+  if (options.convertTo) {
+    filename = filename.replace(/\.[^/.]+$/, "");   //change filename extension of converted (ie to PDF)
+    filename = filename+'.'+options.convertTo
+  }
 
   carbone.render(template, data, options, function(err, result){
     if (err) {

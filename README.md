@@ -18,6 +18,9 @@ Container launches an Express web server that listens for POST requests with the
         template: "/path/to/template',
         json: {
             <report data passed>
+        },
+        options: {
+            < carbone processing options, such as "convertTo: pdf" >
         }
     
     }
