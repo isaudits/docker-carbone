@@ -1,10 +1,9 @@
 FROM node:latest
 
 ENV CARBONE_VERSION="2.1.1"
-ENV LIBRE_VERSION="6.4.5.2"
 
+# ENV LIBRE_VERSION="6.4.5.2"
 
-WORKDIR /tmp
 # RUN cd /tmp && \
 #     wget https://downloadarchive.documentfoundation.org/libreoffice/old/${LIBRE_VERSION}/deb/x86_64/LibreOffice_${LIBRE_VERSION}_Linux_x86-64_deb.tar.gz && \
 #     apt update && \
