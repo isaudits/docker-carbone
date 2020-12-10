@@ -29,7 +29,7 @@ app.get('/', function(request, response) {
 app.post('/', function(request, response) {
   
   template = request.body.template
-  filename = template.replace(/^.*[\\\/]/, '')
+  filename = template.replace(/^.*[\\\/]/, '')    //extract template filename to use as download file name
   data = JSON.parse(request.body.json)
   options = {convertTo : 'pdf'}
 
@@ -37,12 +37,10 @@ app.post('/', function(request, response) {
     if (err) {
       return console.log(err);
     }
-
     response.setHeader('Content-Length', result.length)
     response.setHeader('Content-Type', 'application/octet-stream')
-    response.setHeader('Content-disposition', 'attachment;filename=' + filename)
+    response.setHeader('Content-Disposition', 'attachment; filename="'+filename+'";');
     response.send(result)
-
   });
 })
 
