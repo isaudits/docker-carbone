@@ -1,21 +1,30 @@
 const carbone = require("carbone");
 const express = require("express");
 const fs = require("fs");
-const path = require("path");
-const multer = require(`multer`);
+const multer = require("multer");
+const basicAuth = require("express-basic-auth");
+const AWS = require("aws-sdk");
+const dotenv = require("dotenv");
 const app = express();
 
+dotenv.config();
+AWS.config.update({ region: process.env.AWS_REGION });
+
+const username = process.env.USER || "user";
+const password = process.env.PASSWORD || "password";
+const users = {};
+users[username] = password;
+
+app.use(
+  basicAuth({
+    users,
+    unauthorizedResponse: {
+      message: "Bad credentials",
+    },
+  })
+);
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json({ limit: "50mb" }));
-
-const apiKeyMiddleware = function (req, res, next) {
-  if (req.header("key") === process.env.KEY) {
-    next();
-  } else {
-    throw new Error("API Key mismatch!");
-  }
-};
-app.use(apiKeyMiddleware);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
@@ -31,14 +40,6 @@ app.get("/template", async (req, res) => {
   res.send(files);
 });
 
-// const storage = multer.diskStorage({
-//   destination: function (req, file, cb) {
-//     cb(null, "./templates");
-//   },
-//   filename: function (req, file, cb) {
-//     cb(null, Date.now() + path.extname(file.originalname));
-//   },
-// });
 const storage = multer.diskStorage({
   destination(req, file, cb) {
     cb(null, "./templates");
@@ -54,11 +55,20 @@ app.post("/template", upload.single(`template`), async (req, res) => {
   res.send("Template Uploaded!");
 });
 
-app.post("/", async (req, res) => {
-  template = req.body.template;
-  filename = template.replace(/^.*[\\\/]/, ""); //extract template filename to use as download file name
-  data = req.body.json;
-  options = req.body.options;
+app.all("/generate", async (req, res) => {
+  if (req.method === "GET") {
+    template = req.query.template;
+    filename = req.query.filename;
+    data = req.query.json;
+    options = req.query.options;
+  } else if (req.method === "POST") {
+    template = req.body.template;
+    filename = req.body.filename;
+    data = req.body.json;
+    options = req.body.options;
+  } else {
+    throw new Error("Method not supported");
+  }
 
   if (options.convertTo) {
     filename = filename.replace(/\.[^/.]+$/, ""); //change filename extension of converted (ie to PDF)
@@ -69,14 +79,18 @@ app.post("/", async (req, res) => {
     if (err) {
       return console.log(err);
     }
-    await fs.promises.writeFile(filename, result);
-    
-    res.setHeader("Content-Length", result.length);
-    res.setHeader("Content-Type", "application/octet-stream");
-    res.setHeader(
-      "Content-Disposition",
-      'attachment; filename="' + filename + '";'
+
+    const s3 = new AWS.S3();
+    s3.upload(
+      {
+        ACL: "public-read",
+        Bucket: process.env.AWS_BUCKET_NAME,
+        Body: result,
+        Key: filename,
+      },
+      function (err, data) {
+        res.send(data.Location);
+      }
     );
-    res.send(result);
   });
 });
