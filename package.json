@@ -9,8 +9,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "aws-sdk": "^2.893.0",
     "carbone": "^3.1.0",
+    "dotenv": "^8.2.0",
     "express": "^4.17.1",
+    "express-basic-auth": "^1.2.0",
     "multer": "^1.4.2"
   }
 }
