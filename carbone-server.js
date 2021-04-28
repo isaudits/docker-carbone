@@ -1,12 +1,13 @@
-const carbone = require("carbone");
-const express = require("express");
 const fs = require("fs");
-const multer = require("multer");
-const basicAuth = require("express-basic-auth");
+const cors = require('cors')
 const AWS = require("aws-sdk");
 const dotenv = require("dotenv");
-const app = express();
+const multer = require("multer");
+const carbone = require("carbone");
+const express = require("express");
+const basicAuth = require("express-basic-auth");
 
+const app = express();
 dotenv.config();
 AWS.config.update({ region: process.env.AWS_REGION });
 
@@ -14,6 +15,10 @@ const username = process.env.USER || "user";
 const password = process.env.PASSWORD || "password";
 const users = {};
 users[username] = password;
+
+app.use(cors({
+  origin: process.env.CORS_WHITELIST_ORIGIN
+}))
 
 app.use(
   basicAuth({
@@ -59,8 +64,9 @@ app.all("/generate", async (req, res) => {
   if (req.method === "GET") {
     template = req.query.template;
     filename = req.query.filename;
-    data = req.query.json;
-    options = req.query.options;
+    data = JSON.parse(req.query.json);
+    options = JSON.parse(req.query.options);
+    console.log(template, filename, data, options)
   } else if (req.method === "POST") {
     template = req.body.template;
     filename = req.body.filename;
@@ -75,22 +81,26 @@ app.all("/generate", async (req, res) => {
     filename = filename + "." + options.convertTo;
   }
 
-  carbone.render(template, data, options, async (err, result) => {
-    if (err) {
-      return console.log(err);
-    }
-
-    const s3 = new AWS.S3();
-    s3.upload(
-      {
-        ACL: "public-read",
-        Bucket: process.env.AWS_BUCKET_NAME,
-        Body: result,
-        Key: filename,
-      },
-      function (err, data) {
-        res.send(data.Location);
+  try {
+    carbone.render(template, data, options, async (err, result) => {
+      if (err) {
+        return console.log(err);
       }
-    );
-  });
+  
+      const s3 = new AWS.S3();
+      s3.upload(
+        {
+          ACL: "public-read",
+          Bucket: process.env.AWS_BUCKET_NAME,
+          Body: result,
+          Key: filename,
+        },
+        function (err, data) {
+          res.send(data.Location);
+        }
+      );
+    });
+  } catch (e) {
+    throw new Error(e);
+  }
 });
