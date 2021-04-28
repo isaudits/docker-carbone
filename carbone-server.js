@@ -96,7 +96,9 @@ app.all("/generate", async (req, res) => {
           Key: filename,
         },
         function (err, data) {
-          res.send(data.Location);
+          res.send({
+            url: data.Location
+          });
         }
       );
     });
