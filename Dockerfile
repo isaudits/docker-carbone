@@ -1,6 +1,6 @@
 FROM node:latest
 
-RUN apt-get update && apt-get install -y libreoffice libreoffice-script-provider-python && \
+RUN apt-get update && apt-get install -y libreoffice libreoffice-script-provider-python zip && \
     apt-get autoremove -y && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*

@@ -1,11 +1,13 @@
 const fs = require("fs");
-const cors = require('cors')
+const util = require("util");
+const cors = require("cors");
 const AWS = require("aws-sdk");
 const dotenv = require("dotenv");
 const multer = require("multer");
 const carbone = require("carbone");
 const express = require("express");
 const basicAuth = require("express-basic-auth");
+const exec = util.promisify(require("child_process").exec);
 
 const app = express();
 dotenv.config();
@@ -16,9 +18,11 @@ const password = process.env.PASSWORD || "password";
 const users = {};
 users[username] = password;
 
-app.use(cors({
-  origin: process.env.CORS_WHITELIST_ORIGIN
-}))
+app.use(
+  cors({
+    origin: process.env.CORS_WHITELIST_ORIGIN,
+  })
+);
 
 app.use(
   basicAuth({
@@ -61,19 +65,36 @@ app.post("/template", upload.single(`template`), async (req, res) => {
 });
 
 app.all("/generate", async (req, res) => {
+  var template, filename, imageReplace, data, options;
   if (req.method === "GET") {
     template = req.query.template;
     filename = req.query.filename;
+    imageReplace = JSON.parse(req.query.imageReplace);
     data = JSON.parse(req.query.json);
     options = JSON.parse(req.query.options);
-    console.log(template, filename, data, options)
   } else if (req.method === "POST") {
     template = req.body.template;
     filename = req.body.filename;
+    imageReplace = req.body.imageReplace;
     data = req.body.json;
     options = req.body.options;
   } else {
     throw new Error("Method not supported");
+  }
+
+  if (imageReplace) {
+    var newTemplate = template.split(".");
+    newTemplate = "temp." + newTemplate[newTemplate.length - 1];
+    try {
+      const { stdout, stderr } = await exec(
+        `sh replace-image.sh ${template} ${newTemplate} ${imageReplace.destination} ${imageReplace.source}`
+      );
+
+      // temp is temporary folder defined in shell script above
+      template = `temp/${newTemplate}`;
+    } catch (err) {
+      throw new Error(err);
+    }
   }
 
   if (options.convertTo) {
@@ -86,7 +107,7 @@ app.all("/generate", async (req, res) => {
       if (err) {
         return console.log(err);
       }
-  
+
       const s3 = new AWS.S3();
       s3.upload(
         {
@@ -97,7 +118,7 @@ app.all("/generate", async (req, res) => {
         },
         function (err, data) {
           res.send({
-            url: data.Location
+            url: data.Location,
           });
         }
       );
