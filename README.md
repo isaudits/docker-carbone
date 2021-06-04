@@ -37,10 +37,10 @@ The API support image replacement with some caveats. First of all, use the follo
 {
     template: "/path/to/template',
     filename: "filename.pdf",
-    imageReplace: {
+    imagesReplace: [{
         source: "https://klinikpintar.id/images/banner-image-hs.png",
         destination: "word/media/image3.png"
-    },
+    }],
     json: {
         <report data passed>
     },

@@ -65,35 +65,38 @@ app.post("/template", upload.single(`template`), async (req, res) => {
 });
 
 app.all("/generate", async (req, res) => {
-  var template, filename, imageReplace, data, options;
+  var template, filename, imagesReplace, data, options;
   if (req.method === "GET") {
     template = req.query.template;
     filename = req.query.filename;
-    imageReplace = JSON.parse(req.query.imageReplace);
+    imagesReplace = JSON.parse(req.query.imagesReplace);
     data = JSON.parse(req.query.json);
     options = JSON.parse(req.query.options);
   } else if (req.method === "POST") {
     template = req.body.template;
     filename = req.body.filename;
-    imageReplace = req.body.imageReplace;
+    imagesReplace = req.body.imagesReplace;
     data = req.body.json;
     options = req.body.options;
   } else {
     throw new Error("Method not supported");
   }
 
-  if (imageReplace) {
+  if (imagesReplace) {
     var newTemplate = template.split(".");
     newTemplate = "temp." + newTemplate[newTemplate.length - 1];
-    try {
-      const { stdout, stderr } = await exec(
-        `sh replace-image.sh ${template} ${newTemplate} ${imageReplace.destination} ${imageReplace.source}`
-      );
 
-      // temp is temporary folder defined in shell script above
-      template = `temp/${newTemplate}`;
-    } catch (err) {
-      throw new Error(err);
+    for (let i = 0; i < imagesReplace.length; i++) {
+      const imageReplace = imagesReplace[i];
+      try {
+        const { stdout, stderr } = await exec(
+          `sh replace-image.sh ${template} ${newTemplate} ${imageReplace.destination} ${imageReplace.source}`
+        );
+        // temp is temporary folder defined in shell script above
+        template = `temp/${newTemplate}`;
+      } catch (err) {
+        throw new Error(err);
+      }
     }
   }
 
